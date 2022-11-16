@@ -1,0 +1,145 @@
+---
+title: "Activity#09"
+author: "Jingcheng Xiao with Tariq Lisse"
+date: "2022-11-12"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+echo = TRUE,
+warning = FALSE,
+message = FALSE,
+fig.align = "center"
+)
+```
+
+```{r loadPackages}
+# Load packages
+library(rvest)
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(tidyr)
+```
+
+```{r install trackdown}
+devtools::install_github(
+repo = "claudiozandonella/trackdown",
+build_vignettes = TRUE
+)
+```
+
+```{r upload,eval = FALSE,include=FALSE}
+trackdown::upload_file(
+file = "act9.Rmd",
+hide_code = TRUE,
+rich_text = TRUE,
+path_output = "act9.pdf"
+)
+```
+
+```{r update,eval = FALSE,include=FALSE}
+
+trackdown::update_file(
+file = "act9.Rmd",
+hide_code = TRUE,
+rich_text = TRUE,
+path_output = "act9.pdf"
+)
+```
+
+```{r download,eval = FALSE,include=FALSE}
+trackdown::download_file(
+file = "act9.Rmd"
+)
+```
+
+```{r render,eval = FALSE,include=FALSE}
+
+trackdown::render_file(
+file = "act9.Rmd"
+)
+```
+
+```{r getStats}
+# ESPN CLE 2022 season stats
+espnCLEStats <- read_html(
+  x = "https://www.espn.com/nba/team/stats/_/name/cle/cleveland-cavaliers"
+) %>%
+  html_elements(css = "table") %>%
+  html_table()
+```
+
+```{r getRoster}
+# ESPN CLE 2022 season roster
+CLERoster <- read_html(
+  x = "https://www.espn.com/nba/team/roster/_/name/cle/cleveland-cavaliers"
+) %>%
+  html_elements(css = "table") %>%
+  html_table()
+```
+
+```{r dataWrangling}
+# clean roster data
+roster <- CLERoster[[1]]
+roster <- roster[,-1] %>%
+    tidyr::separate(
+    col = Name,
+    into = c("First", "Last")
+  )
+
+# After looking at the list elements, we want elements 1 & 2
+# cbind that 2 elements
+CLEstats <- cbind(espnCLEStats[[1]], espnCLEStats[[2]])
+
+# Clean ESPN Data ----
+# Remove Total Row, Separate Name from Position,
+# Make a new full name column
+espnScoring <- CLEstats %>%
+  filter(Name != "Total") %>%
+  tidyr::separate(
+    col = Name,
+    into = c("First", "Last", "Position")
+  ) %>%
+  mutate(
+    "Player" = paste(First, Last, sep = " "),
+    .before = First
+  )
+
+# Join roster and stats Data Frames
+espnScoring <- inner_join(
+  x = espnScoring,
+  y = roster,
+  by = c("First" = "First", "Position" = "POS")
+)
+```
+
+
+```{r dataViz}
+# make Plot
+ggplot(
+  data = espnScoring,
+  mapping = aes(x = PTS, y = PER, shape = Position, color = Position)
+) +
+  geom_point(size = 3, na.rm = TRUE) +
+  geom_text(
+    mapping = aes(label = paste0(`Last.x`)),
+    color = "black",
+    nudge_y = -1,
+    size = 3,
+    na.rm = TRUE
+  ) +
+  theme_bw() +
+  labs(
+    x = "Points Per Game",
+    y = "Player Efficiency Rating",
+    title = "Player Efficiency Rating by CLE Player PTS and Position")
+
+```
+
+The data visualization represents the Player Efficiency Rating of the Cleveland Cavaliers basketball players based on their points and position. Based on the visualization, it is evident that Isaiah Mobley, Donovan Mitchell and Kevin Love have the highest player efficiency ratings. Isaiah Mobley is a forward, Donovan Mitchell is a guard and Kevin Love is also a forward.
